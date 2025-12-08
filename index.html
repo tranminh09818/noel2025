@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Golden Christmas - Master Gestures</title>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Times New Roman', serif; }
+        
+        /* Loader */
+        #loader {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: #000; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; z-index: 999;
+            transition: opacity 1s ease-out;
+        }
+        .spinner {
+            width: 60px; height: 60px; border: 2px solid rgba(212,175,55,0.1);
+            border-radius: 50%; border-top-color: #D4AF37;
+            animation: spin 1s infinite linear;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        #loader-text { margin-top: 15px; color: #D4AF37; letter-spacing: 3px; font-size: 12px; }
+
+        /* UI */
+        #main-title {
+            position: absolute; top: 10%; width: 100%; text-align: center;
+            color: #FFF; font-size: 18px; letter-spacing: 10px; opacity: 0.8; 
+            text-transform: uppercase; text-shadow: 0 0 20px rgba(255,215,0,0.5);
+            pointer-events: none; transition: opacity 0.5s;
+        }
+        
+        /* Camera & Debug */
+        #cam-container {
+            position: absolute; bottom: 20px; left: 20px; width: 160px; height: 120px;
+            border-radius: 10px; overflow: hidden; border: 1px solid #333; opacity: 0.7;
+            transform: scaleX(-1); z-index: 10;
+        }
+        #cam-preview { width: 100%; height: 100%; object-fit: cover; }
+        
+        #gesture-debug {
+            position: absolute; bottom: 150px; left: 20px;
+            color: #D4AF37; font-family: monospace; font-size: 12px;
+            text-shadow: 0 0 5px #000; pointer-events: none;
+            line-height: 1.5;
+        }
+
+        /* AI Button */
+        #ai-btn {
+            position: absolute; bottom: 30px; right: 30px;
+            background: rgba(0,0,0,0.5); border: 1px solid #D4AF37; color: #D4AF37;
+            padding: 10px 25px; border-radius: 20px; cursor: pointer;
+            font-size: 12px; letter-spacing: 2px; transition: 0.3s; z-index: 20;
+        }
+        #ai-btn:hover { background: #D4AF37; color: #000; box-shadow: 0 0 20px #D4AF37; }
+
+        /* AI Modal */
+        #ai-modal {
+            display: none; position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%, -50%); width: 300px;
+            background: rgba(10,10,10,0.95); border: 1px solid #D4AF37;
+            padding: 30px; text-align: center; z-index: 100; box-shadow: 0 0 50px rgba(0,0,0,0.8);
+            border-radius: 8px;
+        }
+        #ai-input {
+            width: 100%; padding: 10px; margin: 15px 0; background: #222;
+            border: 1px solid #444; color: #D4AF37; text-align: center; outline: none;
+            box-sizing: border-box;
+        }
+        #ai-submit {
+            background: #D4AF37; border: none; padding: 8px 20px; cursor: pointer; font-weight: bold;
+            color: #000; transition: 0.2s;
+        }
+        #ai-submit:hover { background: #fff; }
+        #ai-close { position: absolute; top: 10px; right: 15px; color: #666; cursor: pointer; font-family: sans-serif;}
+
+        /* Upload Button Styles */
+        #upload-btn {
+            background: transparent; border: 1px solid #D4AF37; color: #D4AF37;
+            padding: 5px 15px; cursor: pointer; border-radius: 15px;
+            font-size: 11px; letter-spacing: 1px; transition: 0.2s;
+            margin-top: 10px;
+        }
+        #upload-btn:hover { background: #D4AF37; color: #000; }
+    </style>
+</head>
+<body>
+
+    <div id="loader">
+        <div class="spinner"></div>
+        <div id="loader-text">LOADING GOLDEN MAGIC...</div>
+    </div>
+
+    <div id="main-title">MERRY CHRISTMAS</div>
+
+    <div id="cam-container"><video id="cam-preview" playsinline autoplay muted></video></div>
+    
+    <div id="gesture-debug">
+        Waiting for Hand...<br>
+         ☝ 1 Ngón: Giữ 3s về Cây | Lắc để Nổ<br>
+         🖐 5 Ngón: Zoom | ✊ Nắm: Reset<br>
+         👌 Chụm/Bánh: Chỉnh cỡ ảnh
+    </div>
+
+    <button id="ai-btn" onclick="app.toggleAI()"> AI & PHOTOS</button>
+
+    <div id="ai-modal">
+        <span id="ai-close" onclick="app.toggleAI()">✕</span>
+        
+        <!-- AI Wish Section -->
+        <h3 style="color:#D4AF37; margin:0; letter-spacing: 2px;">MAKE A WISH</h3>
+        <p style="color:#666; font-size: 10px; margin-bottom: 5px;">(AI or Direct Text)</p>
+        <input type="text" id="ai-input" placeholder="e.g. I Love You">
+        <button id="ai-submit" onclick="app.askGemini()">CAST SPELL</button>
+
+        <!-- Image Upload Section -->
+        <hr style="border-top: 1px dashed #333; border-bottom: none; margin: 25px 0 15px 0;">
+        <h3 style="color:#D4AF37; margin:0; letter-spacing: 2px; font-size: 14px;">YOUR MEMORIES</h3>
+        <p style="color:#888; font-size: 10px; margin: 5px 0 10px 0;">Upload photos to replace the floating frames</p>
+        
+        <input type="file" id="img-upload" accept="image/*" multiple style="display: none;" onchange="app.uploadImages(this)">
+        <button id="upload-btn" onclick="document.getElementById('img-upload').click()"> SELECT PHOTOS</button>
+    </div>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/",
+                "@mediapipe/tasks-vision": "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/+esm"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { FontLoader } from 'three/addons/loaders/FontLoader.js';
+        import { TextGeometry } from 'three/addons/geometries/TextGeometry.js';
+        import { MeshSurfaceSampler } from 'three/addons/math/MeshSurfaceSampler.js';
+        import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+        import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+        import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+        import { FilesetResolver, HandLandmarker } from "@mediapipe/tasks-vision";
+
+        class ChristmasGestures {
+            constructor() {
+                this.config = {
+                    particleCount: 6000, 
+                    snowCount: 800,
+                    frameCount: 8,
+                    // MÀU ĐỎ RỰC RỠ + Vàng Kim
+                    colors: [0xFFD700, 0xFFE5B4, 0xDAA520, 0xFFFFE0, 0xB8860B, 0xFF0000, 0xDC143C] 
+                };
+
+                this.state = {
+                    mode: 'tree', // tree, text, morphing
+                    zoom: 1.0,    // Camera zoom distance factor
+                    rotationSpeed: 0.1, 
+                    targetRotationSpeed: 0.1,
+                    frameScale: 1.0, 
+                    handDetected: false
+                };
+
+                this.positions = { tree: [], text: [], explosion: [] };
+                this.particles = [];
+                this.frames = []; 
+                
+                this.apiKey = localStorage.getItem("gemini_api_key") || ""; 
+
+                this.lastShakeX = 0; 
+                this.shakeCounter = 0;
+                this.lastTime = 0; 
+                this.mouse = new THREE.Vector2(999, 999);
+                this.morphTimeout = null; 
+                
+                this.holdStart = 0; 
+                
+                this.initThree();
+                this.initPostProcessing();
+                this.initParticles();
+                this.initFrames();
+                this.initSnow();
+                this.initAI();
+
+                new FontLoader().load('https://threejs.org/examples/fonts/optimer_bold.typeface.json', (font) => {
+                    this.loadedFont = font;
+                    this.calculatePositions(font).then(() => {
+                        this.targetPositions = this.positions.tree;
+                        document.getElementById('loader').style.opacity = 0;
+                        setTimeout(() => {
+                            const l = document.getElementById('loader');
+                            if(l) l.remove();
+                        }, 1000);
+                        this.animate();
+                    });
+                });
+
+                window.addEventListener('resize', () => this.onResize());
+                
+                window.addEventListener('mousemove', (e) => {
+                    if (!this.state.handDetected) {
+                        this.mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+                        this.mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+                        this.state.targetRotationSpeed = (this.mouse.x + 1) * 0.5;
+                    }
+                });
+            }
+
+            initThree() {
+                this.scene = new THREE.Scene();
+                this.scene.background = new THREE.Color(0x000000);
+                this.scene.fog = new THREE.FogExp2(0x000000, 0.015);
+
+                this.camera = new THREE.PerspectiveCamera(50, window.innerWidth/window.innerHeight, 0.1, 1000);
+                this.camera.position.set(0, 0, 90);
+
+                this.renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: "high-performance" });
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+                this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+                this.renderer.outputColorSpace = THREE.SRGBColorSpace; 
+                this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+                document.body.appendChild(this.renderer.domElement);
+
+                this.scene.add(new THREE.AmbientLight(0xffffff, 0.8)); 
+                const dirLight = new THREE.DirectionalLight(0xffffff, 2.5);
+                dirLight.position.set(0, 50, 50);
+                this.scene.add(dirLight);
+
+                const starGeo = new THREE.IcosahedronGeometry(1.5, 0);
+                const starMat = new THREE.MeshBasicMaterial({ color: 0xFFFF00 });
+                this.starMesh = new THREE.Mesh(starGeo, starMat);
+                this.starMesh.position.set(0, 32, 0); 
+                this.scene.add(this.starMesh);
+            }
+
+            initPostProcessing() {
+                this.composer = new EffectComposer(this.renderer);
+                this.composer.addPass(new RenderPass(this.scene, this.camera));
+                
+                this.bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4, 0.85);
+                this.bloomPass.threshold = 0.85; 
+                this.bloomPass.strength = 1.2;
+                this.bloomPass.radius = 0.5;
+                this.composer.addPass(this.bloomPass);
+            }
+
+            initParticles() {
+                const geo = new THREE.SphereGeometry(0.12, 6, 6);
+                const mat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+                this.instancedMesh = new THREE.InstancedMesh(geo, mat, this.config.particleCount);
+                this.scene.add(this.instancedMesh);
+
+                this.particles = [];
+                const dummy = new THREE.Object3D();
+
+                for(let i=0; i<this.config.particleCount; i++) {
+                    const color = new THREE.Color(this.config.colors[Math.floor(Math.random()*this.config.colors.length)]);
+                    color.offsetHSL(0, 0, Math.random()*0.4); 
+                    this.instancedMesh.setColorAt(i, color);
+
+                    const pos = new THREE.Vector3((Math.random()-0.5)*200, (Math.random()-0.5)*100, (Math.random()-0.5)*100);
+                    
+                    const isBig = Math.random() < 0.1; 
+                    const scale = isBig ? (2.5 + Math.random() * 2.0) : (0.5 + Math.random());
+
+                    this.particles.push({
+                        current: pos.clone(),
+                        velocity: new THREE.Vector3(),
+                        originalColor: color.clone(),
+                        baseScale: scale,
+                        phase: Math.random() * Math.PI * 2,
+                        speed: 0.03 + Math.random() * 0.03
+                    });
+                    
+                    dummy.position.copy(pos);
+                    dummy.updateMatrix();
+                    this.instancedMesh.setMatrixAt(i, dummy.matrix);
+                }
+                this.instancedMesh.instanceColor.needsUpdate = true;
+            }
+
+            initFrames() {
+                const borderGeo = new THREE.BoxGeometry(6.4, 7.4, 0.1); 
+                
+                // Mặc định: Không phát sáng (emissiveIntensity = 0.2), màu vàng ấm
+                const borderMat = new THREE.MeshStandardMaterial({
+                    color: 0xFFC125,      
+                    emissive: 0xFFC125,   
+                    emissiveIntensity: 0.2, // Rất thấp, giống hạt
+                    roughness: 0.3,
+                    metalness: 0.8
+                });
+
+                const photoGeo = new THREE.PlaneGeometry(6, 7);
+                const photoMat = new THREE.MeshBasicMaterial({
+                    color: 0xffffff
+                });
+
+                const genTex = (txt) => {
+                    const c = document.createElement('canvas'); c.width=512; c.height=640; 
+                    const x = c.getContext('2d');
+                    x.fillStyle='#000'; x.fillRect(0,0,512,640); 
+                    
+                    x.fillStyle='#FFD700'; x.font='100px Serif'; x.textAlign='center'; 
+                    x.fillText('★', 256, 280);
+                    x.font='48px Serif'; x.fillText(txt, 256, 400);
+                    
+                    const tex = new THREE.CanvasTexture(c);
+                    tex.colorSpace = THREE.SRGBColorSpace; 
+                    tex.minFilter = THREE.LinearFilter; 
+                    return tex;
+                };
+
+                for(let i=0; i<this.config.frameCount; i++) {
+                    const group = new THREE.Group();
+
+                    // Clone material để có thể chỉnh intensity riêng cho từng khung (nếu cần) hoặc chung
+                    const borderMesh = new THREE.Mesh(borderGeo, borderMat.clone());
+                    group.add(borderMesh);
+
+                    const photoMesh = new THREE.Mesh(photoGeo, photoMat.clone());
+                    photoMesh.position.z = 0.06;
+                    photoMesh.name = "photoContent"; 
+                    photoMesh.material.map = genTex(i%2==0 ? "HOPE" : "JOY");
+                    group.add(photoMesh);
+
+                    this.scene.add(group);
+                    
+                    this.frames.push({ 
+                        mesh: group, 
+                        angle: (i/this.config.frameCount)*Math.PI*2,
+                        y: -15 + i * 5, 
+                        baseScale: 1
+                    });
+                }
+            }
+
+            initSnow() {
+                const cvs = document.createElement('canvas'); cvs.width=32; cvs.height=32;
+                const ctx = cvs.getContext('2d');
+                const grd = ctx.createRadialGradient(16,16,0,16,16,16);
+                grd.addColorStop(0,'rgba(255,255,255,0.9)'); grd.addColorStop(1,'rgba(255,255,255,0)');
+                ctx.fillStyle=grd; ctx.fillRect(0,0,32,32);
+                
+                const geo = new THREE.BufferGeometry();
+                const pos = []; this.snowVel = [];
+                for(let i=0; i<this.config.snowCount; i++){
+                    pos.push((Math.random()-0.5)*300, (Math.random()-0.5)*200, (Math.random()-0.5)*100);
+                    this.snowVel.push({y: 0.05 + Math.random()*0.1, x: Math.random()*100});
+                }
+                geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+                const mat = new THREE.PointsMaterial({ size: 1.2, map: new THREE.CanvasTexture(cvs), transparent: true, opacity: 0.7, depthWrite: false, blending: THREE.AdditiveBlending });
+                this.snowSystem = new THREE.Points(geo, mat);
+                this.scene.add(this.snowSystem);
+            }
+
+            async calculatePositions(font) {
+                const treeArr = [];
+                const h=70, maxR=25;
+                for(let i=0; i<this.config.particleCount; i++) {
+                    const p = i/this.config.particleCount;
+                    const y = 30 - p*h;
+                    const r = Math.pow(p, 0.8) * maxR; 
+                    const theta = i * 2.39996;
+                    const rVar = r * Math.sqrt(Math.random());
+                    treeArr.push(new THREE.Vector3(Math.cos(theta)*rVar, y, Math.sin(theta)*rVar));
+                }
+                this.positions.tree = treeArr;
+                await this.updateText("MERRY CHRISTMAS");
+            }
+
+            updateText(str) {
+                return new Promise(resolve => {
+                    const arr = [];
+                    const config = { font: this.loadedFont, size: 8, height: 0.3, curveSegments: 4 };
+                    const geo = new TextGeometry(str, config);
+                    geo.center();
+                    const sampler = new MeshSurfaceSampler(new THREE.Mesh(geo)).build();
+                    const tmp = new THREE.Vector3();
+                    for(let i=0; i<this.config.particleCount; i++) {
+                        sampler.sample(tmp); arr.push(tmp.clone());
+                    }
+                    this.positions.text = arr;
+                    resolve();
+                });
+            }
+
+            async initAI() {
+                try {
+                    const vision = await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/wasm");
+                    this.handLandmarker = await HandLandmarker.createFromOptions(vision, {
+                        baseOptions: { modelAssetPath: "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task", delegate: "GPU" },
+                        runningMode: "VIDEO", numHands: 1
+                    });
+                    const vid = document.getElementById('cam-preview');
+                    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                    vid.srcObject = stream;
+                    vid.addEventListener("loadeddata", () => this.predictWebcam());
+                } catch(e) { 
+                    console.error("Cam Error", e); 
+                    document.getElementById('gesture-debug').innerHTML = "Camera Denied. Using Mouse Mode.";
+                }
+            }
+
+            predictWebcam() {
+                const vid = document.getElementById('cam-preview');
+                const now = performance.now();
+                if(this.handLandmarker && vid.currentTime !== this.lastTime) {
+                    this.lastTime = vid.currentTime;
+                    const result = this.handLandmarker.detectForVideo(vid, now);
+                    this.processGestures(result, now);
+                }
+                requestAnimationFrame(() => this.predictWebcam());
+            }
+
+            processGestures(result, now) {
+                const statusEl = document.getElementById('gesture-debug');
+                
+                if (result.landmarks.length > 0) {
+                    this.state.handDetected = true; 
+                    const lm = result.landmarks[0]; 
+                    
+                    let fingerCount = 0;
+                    if (lm[8].y < lm[6].y) fingerCount++; 
+                    if (lm[12].y < lm[10].y) fingerCount++; 
+                    if (lm[16].y < lm[14].y) fingerCount++; 
+                    if (lm[20].y < lm[18].y) fingerCount++; 
+                    
+                    const thumbDist = Math.hypot(lm[4].x - lm[0].x, lm[4].y - lm[0].y);
+                    const indexDist = Math.hypot(lm[5].x - lm[0].x, lm[5].y - lm[0].y);
+                    if (thumbDist > indexDist * 1.1) fingerCount++; 
+
+                    const pinchDist = Math.hypot(lm[8].x - lm[4].x, lm[8].y - lm[4].y);
+                    const targetScale = THREE.MathUtils.clamp(THREE.MathUtils.mapLinear(pinchDist, 0.05, 0.3, 0.5, 4.0), 0.5, 4.0);
+                    this.state.frameScale += (targetScale - this.state.frameScale) * 0.1;
+
+
+                    // ============ LOGIC CỬ CHỈ ============
+                    
+                    // CASE 1: 1 NGÓN -> LOGIC GIỮ 3 GIÂY & LẮC
+                    if (fingerCount === 1) {
+                        
+                        // Nếu CHƯA ở chế độ cây thông: Cần GIỮ YÊN 3 GIÂY
+                        if (this.state.mode !== 'tree' && this.state.mode !== 'morphing') {
+                            if (this.holdStart === 0) this.holdStart = now; // Bắt đầu đếm
+                            
+                            const elapsed = now - this.holdStart;
+                            if (elapsed > 3000) { // Đã giữ đủ 3 giây
+                                 this.targetPositions = this.positions.tree;
+                                 this.state.mode = 'tree';
+                                 document.getElementById('main-title').innerText = "CHRISTMAS TREE";
+                                 this.triggerMorph(false);
+                                 this.holdStart = 0; // Reset
+                            } else {
+                                 // Hiển thị đếm ngược
+                                 const timeLeft = Math.ceil((3000 - elapsed)/1000);
+                                 statusEl.innerHTML = `☝ GIỮ YÊN ${timeLeft}s ĐỂ VỀ CÂY THÔNG`;
+                            }
+                        } 
+                        
+                        // Nếu ĐÃ ở chế độ Cây thông: Cho phép lắc
+                        else {
+                            this.holdStart = 0; // Reset timer giữ
+                            
+                            const currentX = lm[8].x;
+                            if (Math.abs(currentX - this.lastShakeX) > 0.05) { 
+                                 this.shakeCounter++;
+                            } else {
+                                 this.shakeCounter = Math.max(0, this.shakeCounter - 1);
+                            }
+                            
+                            if (this.shakeCounter > 3) { 
+                                this.triggerMorph(true, 'tree'); 
+                                this.shakeCounter = 0;
+                            }
+                            this.lastShakeX = currentX;
+
+                            statusEl.innerHTML = "☝ 1 NGÓN: CÂY | 👋 LẮC MẠNH = BÙM";
+                        }
+                    }
+
+                    // CASE 2: NẮM ĐẤM
+                    else if (fingerCount === 0) {
+                        this.holdStart = 0;
+                        this.state.zoom += (1.0 - this.state.zoom) * 0.05; 
+                        statusEl.innerHTML = "✊ NẮM TAY: THU LẠI (RESET)";
+                    } 
+                    
+                    // CASE 3: 5 NGÓN
+                    else if (fingerCount === 5) {
+                        this.holdStart = 0;
+                        this.state.zoom += (2.5 - this.state.zoom) * 0.05; 
+                        
+                        const handX = lm[9].x;
+                        if (Math.abs(handX - this.lastShakeX) > 0.05) this.shakeCounter++;
+                        else this.shakeCounter = Math.max(0, this.shakeCounter-1);
+                        
+                        if(this.shakeCounter > 3) { 
+                             this.triggerMorph(true, 'tree'); 
+                             this.shakeCounter=0; 
+                        }
+                        this.lastShakeX = handX;
+
+                        statusEl.innerHTML = "🖐 5 NGÓN: ZOOM | 👋 LẮC MẠNH = BÙM";
+                    }
+                    
+                    else {
+                        this.holdStart = 0;
+                        statusEl.innerHTML = `👌 CHỤM/BÁNH TAY: ZOOM ẢNH (${this.state.frameScale.toFixed(1)}x)`;
+                        this.lastShakeX = lm[9].x; 
+                    }
+
+                    const rotDx = lm[9].x - lm[0].x;
+                    const rotDy = lm[9].y - lm[0].y;
+                    const angle = Math.atan2(rotDy, rotDx);
+                    this.state.targetRotationSpeed = (angle + Math.PI/2) * 2.0; 
+
+                } else {
+                    this.state.handDetected = false; 
+                    this.holdStart = 0;
+                    statusEl.innerHTML = "Đang tìm bàn tay... (Có thể dùng chuột)";
+                }
+            }
+
+            triggerMorph(isBigExplosion = true, returnMode = null) {
+                if(this.state.mode === 'morphing') return;
+                
+                this.state.mode = 'morphing';
+                
+                this.particles.forEach(p => {
+                    const dir = p.current.clone().normalize();
+                    const force = isBigExplosion ? (0.8 + Math.random() * 0.5) : (0.1 + Math.random() * 0.1);
+                    p.velocity.add(dir.multiplyScalar(force));
+                });
+
+                if (returnMode) {
+                    if (this.morphTimeout) clearTimeout(this.morphTimeout);
+                    this.morphTimeout = setTimeout(() => {
+                        if (returnMode === 'tree') {
+                            this.targetPositions = this.positions.tree;
+                            this.state.mode = 'tree';
+                            document.getElementById('main-title').innerText = "CHRISTMAS TREE";
+                        }
+                    }, 1000); 
+                } else {
+                     setTimeout(() => {
+                        if (this.state.mode === 'morphing') {
+                            this.state.mode = 'tree'; 
+                        }
+                    }, 500);
+                }
+            }
+
+            animate() {
+                requestAnimationFrame(() => this.animate());
+                const time = performance.now() * 0.001;
+
+                if (this.starMesh) {
+                    this.starMesh.rotation.y = time * 0.5;
+                    this.starMesh.rotation.z = time * 0.2;
+                    const hue = 0.14; 
+                    const saturation = 1.0; 
+                    const lightness = 0.5 + Math.abs(Math.sin(time * 3)) * 0.4; 
+                    this.starMesh.material.color.setHSL(hue, saturation, lightness);
+                }
+
+                const baseZ = 90;
+                const targetZ = baseZ / this.state.zoom;
+                this.camera.position.z += (targetZ - this.camera.position.z) * 0.1;
+
+                this.state.rotationSpeed += (this.state.targetRotationSpeed - this.state.rotationSpeed) * 0.1;
+                this.scene.rotation.y += this.state.rotationSpeed * 0.05;
+
+                const dummy = new THREE.Object3D();
+                let i = 0;
+                
+                for(const p of this.particles) {
+                    let target = (this.state.mode === 'morphing') ? null : (this.targetPositions[i] || p.current);
+                    
+                    if (target) {
+                        let finalTarget = target.clone();
+                        if (this.state.mode === 'text') {
+                             const waveY = Math.sin(time * 3.0 + finalTarget.x * 0.2) * 1.5;
+                             const waveZ = Math.cos(time * 2.0 + finalTarget.x * 0.2) * 0.5;
+                             finalTarget.y += waveY;
+                             finalTarget.z += waveZ;
+                        }
+
+                        const diff = finalTarget.sub(p.current);
+                        const dist = diff.length();
+                        if(dist > 0.05) {
+                            diff.normalize().multiplyScalar(dist * p.speed);
+                            p.current.add(diff);
+                        }
+                    } else {
+                        p.current.add(p.velocity);
+                        p.velocity.multiplyScalar(0.96);
+                    }
+
+                    dummy.position.copy(p.current);
+                    
+                    let s = p.baseScale * (0.8 + Math.sin(time*5 + p.phase)*0.4);
+                    if (this.state.mode === 'text') {
+                        s *= 1.2 + Math.sin(time * 10 + p.phase) * 0.3; 
+                    }
+                    
+                    dummy.scale.setScalar(s);
+                    dummy.lookAt(this.camera.position);
+                    dummy.updateMatrix();
+                    this.instancedMesh.setMatrixAt(i, dummy.matrix);
+                    i++;
+                }
+                this.instancedMesh.instanceMatrix.needsUpdate = true;
+
+                // --- UPDATE KHUNG ẢNH & LOGIC PHÁT SÁNG ---
+                // Tính toán độ sáng mục tiêu dựa trên Scale hiện tại
+                // Scale 1.0 -> Intensity 0.2 (tối)
+                // Scale 3.0 -> Intensity 2.5 (sáng rực)
+                const targetIntensity = THREE.MathUtils.mapLinear(this.state.frameScale, 1.0, 3.0, 0.2, 2.5);
+                const clampedIntensity = THREE.MathUtils.clamp(targetIntensity, 0.2, 2.5);
+
+                if (this.state.mode === 'tree' || this.state.mode === 'morphing') {
+                    this.frames.forEach((f, idx) => {
+                        const y = f.y;
+                        const r = Math.pow((35-y)/75, 0.8) * 18 + 2; 
+                        const theta = f.angle + time * 0.1; 
+                        
+                        f.mesh.position.set(Math.cos(theta)*r, y, Math.sin(theta)*r);
+                        f.mesh.lookAt(0, y, 0);
+                        f.mesh.rotateY(Math.PI); 
+                        
+                        const finalScale = this.state.frameScale;
+                        f.mesh.scale.lerp(new THREE.Vector3(finalScale, finalScale, finalScale), 0.1);
+                        f.mesh.visible = true;
+
+                        // CẬP NHẬT ĐỘ SÁNG CHO VIỀN (Mesh con thứ 0)
+                        const borderMesh = f.mesh.children[0];
+                        if (borderMesh && borderMesh.material) {
+                            borderMesh.material.emissiveIntensity = clampedIntensity;
+                        }
+                    });
+                } else {
+                    this.frames.forEach(f => f.mesh.visible = false);
+                }
+
+                const snPos = this.snowSystem.geometry.attributes.position.array;
+                for(let j=0; j<this.config.snowCount; j++){
+                    snPos[j*3+1] -= this.snowVel[j].y;
+                    if(snPos[j*3+1] < -100) snPos[j*3+1] = 100;
+                }
+                this.snowSystem.geometry.attributes.position.needsUpdate = true;
+
+                this.composer.render();
+            }
+
+            toggleAI() {
+                const el = document.getElementById('ai-modal');
+                el.style.display = el.style.display==='block'?'none':'block';
+            }
+            
+            uploadImages(input) {
+                if (input.files && input.files.length > 0) {
+                    const files = Array.from(input.files);
+                    const btn = document.getElementById('upload-btn');
+                    btn.innerText = "LOADING PHOTOS...";
+                    
+                    Promise.all(files.map(file => {
+                        return new Promise(resolve => {
+                            const reader = new FileReader();
+                            reader.onload = (e) => {
+                                const img = new Image();
+                                img.src = e.target.result;
+                                img.onload = () => {
+                                    const tex = new THREE.Texture(img);
+                                    tex.needsUpdate = true;
+                                    tex.colorSpace = THREE.SRGBColorSpace;
+                                    tex.minFilter = THREE.LinearFilter; 
+                                    tex.magFilter = THREE.LinearFilter;
+                                    tex.anisotropy = this.renderer.capabilities.getMaxAnisotropy();
+                                    resolve(tex);
+                                };
+                            };
+                            reader.readAsDataURL(file);
+                        });
+                    })).then(textures => {
+                        this.frames.forEach((f, i) => {
+                            const tex = textures[i % textures.length];
+                            const photoMesh = f.mesh.getObjectByName('photoContent');
+                            if (photoMesh) {
+                                photoMesh.material.map = tex;
+                                photoMesh.material.needsUpdate = true;
+                            }
+                        });
+                        btn.innerText = " PHOTOS UPDATED!";
+                        setTimeout(() => { 
+                            btn.innerText = " SELECT PHOTOS"; 
+                            this.toggleAI(); 
+                        }, 1500);
+                    });
+                }
+            }
+
+            async askGemini() {
+                const input = document.getElementById('ai-input').value;
+                if(!input) return;
+
+                if (!this.apiKey) {
+                    const key = prompt("Optional: Enter Gemini API Key for AI summary. Cancel to just show your exact text.");
+                    if (key) {
+                        this.apiKey = key;
+                        localStorage.setItem("gemini_api_key", key);
+                    }
+                }
+
+                const btn = document.getElementById('ai-submit');
+                const prevText = btn.innerText;
+                btn.innerText = "WAIT...";
+                
+                let finalText = input.toUpperCase(); 
+
+                if (this.apiKey) {
+                    try {
+                        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${this.apiKey}`, {
+                            method: 'POST', headers: {'Content-Type':'application/json'},
+                            body: JSON.stringify({
+                                contents:[{parts:[{text: `User wish: "${input}". Create a very short, 2-3 word magical Christmas phrase based on this. Return ONLY JSON: {"text":"THE_PHRASE"}` }] }],
+                                generationConfig: { responseMimeType: "application/json" }
+                            })
+                        });
+                        
+                        if (res.ok) {
+                            const d = await res.json();
+                            finalText = JSON.parse(d.candidates[0].content.parts[0].text).text;
+                        } else {
+                            console.warn("API Error, using fallback");
+                        }
+                    } catch(e) { 
+                        console.warn("AI Request Failed, using fallback text", e);
+                    } 
+                }
+
+                await this.updateText(finalText);
+                this.targetPositions = this.positions.text;
+                
+                this.state.mode = 'morphing';
+                this.particles.forEach(p => {
+                    const dir = p.current.clone().normalize();
+                    p.velocity.add(dir.multiplyScalar(0.5 + Math.random()));
+                });
+
+                setTimeout(() => {
+                    this.state.mode = 'text';
+                    document.getElementById('main-title').innerText = finalText;
+                    this.toggleAI();
+                }, 1000);
+
+                btn.innerText = prevText;
+            }
+
+            onResize() {
+                this.camera.aspect = window.innerWidth/window.innerHeight;
+                this.camera.updateProjectionMatrix();
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+                this.composer.setSize(window.innerWidth, window.innerHeight);
+            }
+        }
+
+        const app = new ChristmasGestures();
+        window.app = app;
+    </script>
+</body>
+</html>
