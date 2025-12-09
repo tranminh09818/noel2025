@@ -23,7 +23,7 @@
         @keyframes spin { to { transform: rotate(360deg); } }
         #loader-text { margin-top: 15px; color: #D4AF37; letter-spacing: 3px; font-size: 12px; }
 
-        /* Chữ Merry Christmas to đùng */
+        /* Tiêu đề to đùng ở trên */
         #main-title {
             position: absolute; top: 8%; width: 100%; text-align: center;
             color: #FFD700; font-size: 28px; letter-spacing: 8px; opacity: 0.9; 
@@ -33,27 +33,27 @@
             z-index: 5;
         }
         
-        /* Khung camera ở góc dưới */
+        /* Khung hiển thị Camera (góc dưới trái) */
         #cam-container {
             position: absolute; bottom: 20px; left: 20px; width: 220px; height: 165px;
             border-radius: 12px; overflow: hidden; 
             border: 2px solid #D4AF37; 
             box-shadow: 0 0 25px rgba(212, 175, 55, 0.5); 
-            transform: scaleX(-1); /* Lật ngược cho giống gương */
+            transform: scaleX(-1); /* Lật ngược lại cho giống gương */
             z-index: 10;
             transition: width 0.3s, height 0.3s;
         }
         #cam-preview { 
             width: 100%; height: 100%; object-fit: cover; 
-            /* Filter cà da mặt cho xinh */
+            /* Filter làm đẹp da, sáng sủa */
             filter: brightness(1.25) saturate(1.3) contrast(1.05) sepia(0.15) blur(0.8px);
         }
-        /* Vẽ mấy cái xương tay lên đây */
+        /* Lớp vẽ xương tay đè lên video */
         #hand-canvas {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             z-index: 12; pointer-events: none;
         }
-        /* Làm tối 4 góc camera cho nghệ thuật */
+        /* Hiệu ứng tối góc cho Camera */
         #cam-overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: radial-gradient(circle, rgba(255, 215, 0, 0.1) 20%, rgba(60, 40, 0, 0.3) 80%, rgba(0,0,0,0.8) 100%);
@@ -61,7 +61,7 @@
             pointer-events: none; z-index: 11; mix-blend-mode: overlay;
         }
         
-        /* Bảng hướng dẫn cách dùng */
+        /* Bảng hiện chữ hướng dẫn cử chỉ */
         #gesture-debug {
             position: absolute; bottom: 200px; left: 20px;
             color: #FFD700; font-family: 'Courier New', monospace; font-size: 11px;
@@ -70,7 +70,7 @@
             padding: 10px; border-radius: 8px; border-left: 2px solid #D4AF37;
         }
 
-        /* Nút bấm nhìn kính kính ảo ảo */
+        /* Nút bấm (Style kính mờ) */
         .glass-btn {
             background: rgba(0,0,0,0.6); border: 1px solid #D4AF37; color: #D4AF37;
             padding: 10px 20px; border-radius: 25px; cursor: pointer;
@@ -182,27 +182,27 @@
 
         class ChristmasGestures {
             constructor() {
-                // Cấu hình mấy cái hạt, tuyết, màu sắc ở đây
+                // Cấu hình số lượng, màu sắc ở đây
                 this.config = {
-                    particleCount: 6500, 
-                    snowCount: 900,
-                    frameCount: 8,
+                    particleCount: 6500, // Số hạt lấp lánh
+                    snowCount: 900,      // Số hạt tuyết
+                    frameCount: 8,       // Số khung ảnh
+                    // Bảng màu: Vàng và Đỏ là chính (Xanh để riêng)
                     colors: [
                         0xFFD700, 0xFFE5B4, 0xDAA520, 0xFFFFE0, 0xB8860B, // Vàng
-                        0xFF0000, 0xDC143C, // Đỏ
-                        0x228B22 // Xanh lá (ít thôi)
+                        0xFF0000, 0xDC143C // Đỏ
                     ] 
                 };
 
-                // Trạng thái hiện tại của web (đang zoom bao nhiêu, xoay thế nào...)
+                // Trạng thái của App (đang ở đâu, làm gì)
                 this.state = {
-                    mode: 'tree', 
-                    zoom: 1.0,    
+                    mode: 'tree', // tree (cây), text (chữ), morphing (đang nổ)
+                    zoom: 1.0,    // Camera zoom
                     rotationSpeed: 0.1, 
                     targetRotationSpeed: 0.1,
-                    frameScale: 1.0, 
+                    frameScale: 1.0, // Zoom ảnh
                     handDetected: false,
-                    hoveredFrameIndex: -1
+                    hoveredFrameIndex: -1 // Ảnh nào đang được chọn
                 };
 
                 this.positions = { tree: [], text: [], explosion: [] };
@@ -229,14 +229,14 @@
                 this.onResize = this.onResize.bind(this);
 
                 // Gọi mấy hàm khởi tạo
-                this.initThree();          
-                this.initPostProcessing(); 
-                this.initParticles();      
-                this.initFrames();         
-                this.initSnow();           
-                this.initAI();             
+                this.initThree();          // Dựng sân khấu 3D
+                this.initPostProcessing(); // Bật hiệu ứng Bloom sáng rực
+                this.initParticles();      // Tạo hạt lấp lánh
+                this.initFrames();         // Treo khung ảnh lên
+                this.initSnow();           // Cho tuyết rơi
+                this.initAI();             // Bật con mắt AI
 
-                // Tải font xong thì mới cho chạy
+                // Tải font chữ xong thì mới cho chạy
                 new FontLoader().load('https://threejs.org/examples/fonts/optimer_bold.typeface.json', (font) => {
                     this.loadedFont = font;
                     this.calculatePositions(font).then(() => {
@@ -260,7 +260,7 @@
                 });
             }
 
-            // Khởi tạo sân khấu 3D
+            // --- 1. Dựng Sân Khấu 3D ---
             initThree() {
                 this.scene = new THREE.Scene();
                 this.scene.background = new THREE.Color(0x000000);
@@ -285,6 +285,7 @@
                 dirLight.position.set(0, 50, 50);
                 this.scene.add(dirLight);
 
+                // Ngôi sao vàng trên đỉnh
                 const starGeo = new THREE.IcosahedronGeometry(1.5, 0);
                 const starMat = new THREE.MeshBasicMaterial({ color: 0xFFFF00 });
                 this.starMesh = new THREE.Mesh(starGeo, starMat);
@@ -292,7 +293,7 @@
                 this.scene.add(this.starMesh);
             }
 
-            // Hiệu ứng phát sáng lấp lánh (Bloom)
+            // --- 2. Hiệu ứng phát sáng lấp lánh (Bloom) ---
             initPostProcessing() {
                 this.composer = new EffectComposer(this.renderer);
                 this.composer.addPass(new RenderPass(this.scene, this.camera));
@@ -303,7 +304,7 @@
                 this.composer.addPass(this.bloomPass);
             }
 
-            // Tạo các hạt nhỏ (cấu thành nên cây thông)
+            // --- 3. Tạo hệ thống hạt (Cây thông được xếp từ mấy hạt này) ---
             initParticles() {
                 const geo = new THREE.SphereGeometry(0.12, 6, 6);
                 const mat = new THREE.MeshBasicMaterial({ color: 0xffffff });
@@ -311,14 +312,32 @@
                 this.scene.add(this.instancedMesh);
 
                 this.particles = [];
+                
+                // Mã màu xanh lá để điểm xuyết (ít thôi)
+                const GREEN_COLOR = 0x228B22; 
 
                 for(let i=0; i<this.config.particleCount; i++) {
-                    const rawColor = this.config.colors[Math.floor(Math.random()*this.config.colors.length)];
+                    let rawColor;
+                    let isGreen = false;
+
+                    // Chỉ 4% là hạt xanh lá (Rất ít)
+                    if (Math.random() < 0.04) {
+                        rawColor = GREEN_COLOR;
+                        isGreen = true;
+                    } else {
+                        // Còn lại là Vàng với Đỏ
+                        rawColor = this.config.colors[Math.floor(Math.random()*this.config.colors.length)];
+                    }
+
                     const color = new THREE.Color(rawColor);
                     
-                    const isGreen = (rawColor === 0x228B22); 
-                    if (!isGreen) color.offsetHSL(0, 0, Math.random()*0.4); 
-                    else color.offsetHSL(0, 0, Math.random()*0.1);
+                    if (!isGreen) {
+                        // Màu vàng/đỏ thì cho đổi tông lung tung tí cho đẹp
+                        color.offsetHSL(0, 0, Math.random()*0.4); 
+                    } else {
+                        // Hạt xanh giữ nguyên màu cho đậm đà
+                        color.offsetHSL(0, 0, Math.random()*0.1);
+                    }
                     
                     this.instancedMesh.setColorAt(i, color);
 
@@ -333,7 +352,7 @@
                         baseScale: scale,
                         phase: Math.random() * Math.PI * 2,
                         speed: 0.03 + Math.random() * 0.03,
-                        isGreen: isGreen
+                        isGreen: isGreen // Lưu lại xem có phải hạt xanh không
                     });
                     
                     this.dummy.position.copy(pos);
@@ -343,7 +362,7 @@
                 this.instancedMesh.instanceColor.needsUpdate = true;
             }
 
-            // Tạo mấy cái khung ảnh treo trên cây
+            // --- 4. Tạo khung ảnh trang trí ---
             initFrames() {
                 const borderGeo = new THREE.BoxGeometry(4.2, 4.9, 0.1); 
                 const borderMat = new THREE.MeshStandardMaterial({
@@ -387,7 +406,7 @@
                 }
             }
 
-            // Tạo tuyết rơi
+            // --- 5. Tuyết rơi ---
             initSnow() {
                 const cvs = document.createElement('canvas'); cvs.width=32; cvs.height=32;
                 const ctx = cvs.getContext('2d');
@@ -407,7 +426,7 @@
                 this.scene.add(this.snowSystem);
             }
 
-            // Tính toán vị trí các hạt để xếp thành Cây
+            // --- 6. Tính toán vị trí hạt để xếp thành Cây ---
             async calculatePositions(font) {
                 const treeArr = [];
                 const h=70, maxR=25;
@@ -423,7 +442,7 @@
                 await this.updateText("MERRY CHRISTMAS");
             }
 
-            // Tính toán vị trí các hạt để xếp thành Chữ
+            // --- 7. Tính toán vị trí hạt để xếp thành Chữ ---
             updateText(str) {
                 return new Promise(resolve => {
                     const arr = [];
@@ -440,7 +459,7 @@
                 });
             }
 
-            // Mấy hàm bật/tắt cái bảng nhập điều ước
+            // --- 8. Mấy hàm bật/tắt cái bảng nhập điều ước ---
             toggleAI() {
                 const el = document.getElementById('ai-modal');
                 el.style.display = el.style.display === 'block' ? 'none' : 'block';
@@ -537,7 +556,7 @@
                 }
             }
 
-            // Khởi động Camera và AI nhận diện tay
+            // --- 9. Khởi động AI nhận diện tay ---
             async initAI() {
                 try {
                     const vision = await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/wasm");
@@ -545,29 +564,44 @@
                         baseOptions: { modelAssetPath: "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task", delegate: "GPU" },
                         runningMode: "VIDEO", numHands: 1
                     });
+                    
+                    // Cấu hình Camera cho Mobile: Chọn độ phân giải thấp hơn để nhẹ máy
+                    const constraints = {
+                        video: {
+                            facingMode: "user", // Camera trước
+                            width: { ideal: 640 }, // Giảm độ phân giải để AI chạy nhanh
+                            height: { ideal: 480 }
+                        }
+                    };
+
                     const vid = document.getElementById('cam-preview');
-                    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                    const stream = await navigator.mediaDevices.getUserMedia(constraints);
                     vid.srcObject = stream;
                     vid.addEventListener("loadeddata", () => this.predictWebcam());
                 } catch(e) { 
                     console.error("Cam Error", e); 
-                    document.getElementById('gesture-debug').innerHTML = "Camera Denied. Using Mouse Mode.";
+                    document.getElementById('gesture-debug').innerHTML = "Lỗi Camera: Hãy cấp quyền hoặc thử lại.";
                 }
             }
 
             predictWebcam() {
                 const vid = document.getElementById('cam-preview');
                 const now = performance.now();
-                if(this.handLandmarker && vid.currentTime !== this.lastTime && (now - this.lastPredictionTime > 60)) {
-                    this.lastTime = vid.currentTime;
-                    this.lastPredictionTime = now;
-                    const result = this.handLandmarker.detectForVideo(vid, now);
-                    this.processGestures(result, now);
+                // Bắt lỗi để vòng lặp không chết nếu AI lỗi
+                try {
+                    if(this.handLandmarker && vid.currentTime !== this.lastTime && (now - this.lastPredictionTime > 60)) {
+                        this.lastTime = vid.currentTime;
+                        this.lastPredictionTime = now;
+                        const result = this.handLandmarker.detectForVideo(vid, now);
+                        this.processGestures(result, now);
+                    }
+                } catch (err) {
+                    console.warn("AI Glitch:", err);
                 }
                 requestAnimationFrame(() => this.predictWebcam());
             }
 
-            // Vẽ bộ xương tay màu đỏ lên màn hình
+            // --- 10. Vẽ xương tay màu đỏ ---
             drawHandSkeleton(landmarks) {
                 const canvas = document.getElementById('hand-canvas');
                 const ctx = canvas.getContext('2d');
@@ -599,7 +633,7 @@
                 }
             }
 
-            // --- XỬ LÝ CÁC CỬ CHỈ TAY ---
+            // --- 11. Phần quan trọng nhất: Xử lý Cử chỉ tay ---
             processGestures(result, now) {
                 const statusEl = document.getElementById('gesture-debug');
                 
@@ -623,7 +657,7 @@
                     const targetScale = THREE.MathUtils.clamp(THREE.MathUtils.mapLinear(pinchDist, 0.05, 0.3, 0.5, 4.0), 0.5, 4.0);
                     this.state.frameScale += (targetScale - this.state.frameScale) * 0.1;
 
-                    // Kiểm tra cử chỉ Like chặt chẽ
+                    // Điều kiện Like chặt chẽ
                     const isFingersCurled = (lm[8].y > lm[6].y) && (lm[12].y > lm[10].y) && (lm[16].y > lm[14].y) && (lm[20].y > lm[18].y);
                     const isThumbHigh = (lm[4].y < lm[3].y) && (lm[4].y < lm[5].y);
                     const isThumbUp = isThumbExtended && isFingersCurled && isThumbHigh;
@@ -634,7 +668,7 @@
                         this.twoFingerStart = 0;
                         if (this.likeStart === 0) this.likeStart = now;
                         const elapsed = now - this.likeStart;
-                        if (elapsed > 5000) { // 5 giây
+                        if (elapsed > 5000) { 
                             this.takeScreenshot();
                             this.likeStart = 0;
                         } else {
@@ -727,7 +761,7 @@
                 }
             }
 
-            // Chụp ảnh màn hình
+            // --- 12. Chụp & Lưu Ảnh ---
             takeScreenshot() {
                 if (this.isTakingScreenshot) return;
                 this.isTakingScreenshot = true;
@@ -748,6 +782,7 @@
                     compositeCanvas.height = window.innerHeight;
                     const ctx = compositeCanvas.getContext('2d');
                     
+                    // Vẽ video camera
                     const video = document.getElementById('cam-preview');
                     ctx.save();
                     ctx.translate(compositeCanvas.width, 0);
@@ -755,19 +790,23 @@
                     ctx.filter = 'brightness(1.25) saturate(1.3) contrast(1.05) sepia(0.15) blur(0.8px)';
                     ctx.drawImage(video, 0, 0, compositeCanvas.width, compositeCanvas.height);
                     
+                    // Vẽ khung xương tay
                     const handCanvas = document.getElementById('hand-canvas');
                     ctx.drawImage(handCanvas, 0, 0, compositeCanvas.width, compositeCanvas.height);
                     ctx.restore();
                     
+                    // Vẽ lớp 3D
                     ctx.filter = 'none'; 
                     ctx.drawImage(this.renderer.domElement, 0, 0);
                     
+                    // Vẽ tiêu đề
                     const title = document.getElementById('main-title');
                     ctx.font = '28px "Cinzel Decorative", serif';
                     ctx.fillStyle = '#FFD700';
                     ctx.textAlign = 'center';
                     ctx.fillText(title.innerText, compositeCanvas.width/2, compositeCanvas.height * 0.15);
 
+                    // Tải ảnh về
                     const dataURL = compositeCanvas.toDataURL('image/jpeg', 0.9);
                     const link = document.createElement('a');
                     link.href = dataURL;
@@ -779,7 +818,7 @@
                 }, 150);
             }
 
-            // Hiệu ứng nổ hạt & chuyển cảnh
+            // --- 13. Hiệu ứng Nổ & Chuyển đổi ---
             triggerMorph(isBigExplosion = true, targetMode = 'tree') {
                 if(this.state.mode === 'morphing') return;
                 this.state.mode = 'morphing';
@@ -791,6 +830,7 @@
                 });
 
                 if (this.morphTimeout) clearTimeout(this.morphTimeout);
+                // Giữ trạng thái nổ 2 giây
                 this.morphTimeout = setTimeout(() => {
                     this.state.mode = targetMode;
                     if (targetMode === 'tree') {
@@ -802,7 +842,7 @@
                 }, 2000); 
             }
 
-            // Vòng lặp chuyển động
+            // --- 14. Vòng lặp chuyển động (Chạy liên tục) ---
             animate() {
                 requestAnimationFrame(() => this.animate());
                 const time = performance.now() * 0.001;
@@ -824,7 +864,7 @@
                 this.scene.rotation.y += this.state.rotationSpeed * 0.05;
 
                 let i = 0;
-                
+                // Cập nhật vị trí hạt
                 for(const p of this.particles) {
                     let target = (this.state.mode === 'morphing') ? null : (this.targetPositions[i] || p.current);
                     if (target) {
@@ -847,6 +887,7 @@
                     }
                     this.dummy.position.copy(p.current);
                     let s = p.baseScale;
+                    // Hạt xanh không nhấp nháy
                     if (!p.isGreen) s *= (0.8 + Math.sin(time * 5 + p.phase) * 0.4);
                     if (this.state.mode === 'text') { s *= 1.2 + Math.sin(time * 10 + p.phase) * 0.3; }
                     this.dummy.scale.setScalar(s);
@@ -859,6 +900,7 @@
 
                 const globalScale = this.state.frameScale;
                 
+                // Cập nhật khung ảnh (đều nhau)
                 if (this.state.mode === 'tree' || this.state.mode === 'morphing') {
                     this.frames.forEach((f, idx) => {
                         const y = f.baseY;
@@ -889,6 +931,7 @@
                     this.frames.forEach(f => f.mesh.visible = false);
                 }
 
+                // Cập nhật tuyết rơi
                 const snPos = this.snowSystem.geometry.attributes.position.array;
                 for(let j=0; j<this.config.snowCount; j++){
                     snPos[j*3+1] -= this.snowVel[j].y;
